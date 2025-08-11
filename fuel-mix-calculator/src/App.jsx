@@ -35,43 +35,41 @@ function useLocalStorage(key, initialValue) {
   return [state, setState]
 }
 
-function computeMixWithAddedFuel(currentVolume, currentEPercent, targetEPercent, addedFuelEthanolFraction) {
-  const A = Math.max(0, currentVolume)
-  const Ec = Math.max(0, Math.min(1, currentEPercent / 100))
-  const Et = Math.max(0, Math.min(1, targetEPercent / 100))
-  const Ea = Math.max(0, Math.min(1, addedFuelEthanolFraction))
+function computeFromEmpty(totalVolume, targetEPercent, gasolineEthanolFraction) {
+  const T = Math.max(0, totalVolume)
+  const Et = Math.max(0, Math.min(1, (Number(targetEPercent) || 0) / 100))
+  const Eg = Math.max(0, Math.min(1, gasolineEthanolFraction))
 
-  if (A <= 0) return { addAmount: 0, finalVolume: 0, finalEPercent: targetEPercent, valid: false, reason: 'Sem combustível no tanque.' }
+  if (T <= 0) return { addEthanol: 0, addGasoline: 0, finalEPercent: targetEPercent, valid: false, reason: 'Informe um volume final.' }
+  if (Et > 1) return { addEthanol: 0, addGasoline: 0, finalEPercent: 0, valid: false, reason: 'E% desejado acima de 100%.' }
 
-  const denom = Et - Ea
+  // Usando duas fontes: E100 (Ea=1) e gasolina BR (Ea=Eg)
+  // Sistema: x + y = T; (x + Eg*y)/T = Et
+  // => x = T*(Et - Eg)/(1 - Eg), y = T - x = T*(1 - Et)/(1 - Eg)
+  const denom = 1 - Eg
   if (Math.abs(denom) < 1e-9) {
-    if (Math.abs(Ec - Et) < 1e-9) {
-      return { addAmount: 0, finalVolume: A, finalEPercent: Et * 100, valid: true, reason: '' }
-    }
-    return { addAmount: Infinity, finalVolume: Infinity, finalEPercent: Et * 100, valid: false, reason: 'Alvo igual ao etanol do combustível a ser adicionado; volume infinito seria necessário.' }
+    // Gasolina com 100% de etanol não faz sentido, mas evitamos divisão por zero
+    return { addEthanol: T * Et, addGasoline: T * (1 - Et), finalEPercent: Et * 100, valid: true, reason: '' }
   }
 
-  const x = (A * (Ec - Et)) / denom
-  if (!isFinite(x) || x < 0) {
-    return { addAmount: 0, finalVolume: A, finalEPercent: Ec * 100, valid: false, reason: 'Alvo inalcançável adicionando apenas esse combustível.' }
+  // Faixa atingível: Et in [Eg, 1]
+  if (Et < Eg - 1e-9) {
+    return { addEthanol: 0, addGasoline: 0, finalEPercent: Eg * 100, valid: false, reason: `Com a gasolina selecionada (≈E${round(Eg*100,0)}), o mínimo atingível é E${round(Eg*100,0)}. Para menos, use gasolina E0.` }
   }
 
-  const finalVolume = A + x
-  const finalEPercent = finalVolume > 0 ? ((A * Ec + x * Ea) / finalVolume) * 100 : 0
-  // Sanity: final should be between Ec and Ea
-  const min = Math.min(Ec, Ea) - 1e-6
-  const max = Math.max(Ec, Ea) + 1e-6
-  const EtFrac = finalEPercent / 100
-  const inRange = EtFrac >= min && EtFrac <= max
+  const x = T * (Et - Eg) / denom // E100
+  const y = T - x // Gasolina BR
 
-  return { addAmount: x, finalVolume, finalEPercent, valid: inRange, reason: inRange ? '' : 'Fora da faixa atingível pela mistura.' }
+  const xSafe = Math.max(0, Math.min(T, x))
+  const ySafe = Math.max(0, Math.min(T, y))
+
+  return { addEthanol: xSafe, addGasoline: ySafe, finalEPercent: Et * 100, valid: true, reason: '' }
 }
 
 export default function App() {
   const [unit, setUnit] = useLocalStorage('unit', 'L')
-  const [currentVolumeInput, setCurrentVolumeInput] = useLocalStorage('currentVolume', 30)
-  const [currentE, setCurrentE] = useLocalStorage('currentE', 10)
   const [targetE, setTargetE] = useLocalStorage('targetE', 50)
+  const [totalVolumeInput, setTotalVolumeInput] = useLocalStorage('totalVolume', 40)
   const [brGasTypeId, setBrGasTypeId] = useLocalStorage('br_gas_type', 'E27')
   const [presets, setPresets] = useLocalStorage('presets', [
     { id: 'E30', name: 'E30', targetE: 30 },
@@ -81,51 +79,17 @@ export default function App() {
 
   const selectedGas = BR_GAS_TYPES.find(g => g.id === brGasTypeId) || BR_GAS_TYPES[0]
 
-  const currentVolumeLiters = useMemo(
-    () => toBaseLiters(Number(currentVolumeInput) || 0, unit === 'gal' ? 'gal' : 'L'),
-    [currentVolumeInput, unit]
+  const totalVolumeLiters = useMemo(
+    () => toBaseLiters(Number(totalVolumeInput) || 0, unit === 'gal' ? 'gal' : 'L'),
+    [totalVolumeInput, unit]
   )
 
-  const ethanolCandidate = useMemo(() => computeMixWithAddedFuel(currentVolumeLiters, Number(currentE) || 0, Number(targetE) || 0, 1.0), [currentVolumeLiters, currentE, targetE])
-  const gasolineCandidate = useMemo(() => computeMixWithAddedFuel(currentVolumeLiters, Number(currentE) || 0, Number(targetE) || 0, selectedGas.ethanolFraction), [currentVolumeLiters, currentE, targetE, selectedGas.ethanolFraction])
+  const result = useMemo(() => computeFromEmpty(totalVolumeLiters, Number(targetE) || 0, selectedGas.ethanolFraction), [totalVolumeLiters, targetE, selectedGas.ethanolFraction])
 
-  const decision = useMemo(() => {
-    const options = []
-    if (ethanolCandidate.valid && isFinite(ethanolCandidate.addAmount)) options.push({ mode: 'ethanol', result: ethanolCandidate })
-    if (gasolineCandidate.valid && isFinite(gasolineCandidate.addAmount)) options.push({ mode: 'gasoline', result: gasolineCandidate })
+  const ethanolInUnit = fromBaseLiters(result.addEthanol, unit === 'gal' ? 'gal' : 'L')
+  const gasolineInUnit = fromBaseLiters(result.addGasoline, unit === 'gal' ? 'gal' : 'L')
 
-    if (options.length === 0) {
-      // Fallback suggestion based on direction
-      const Ec = (Number(currentE) || 0) / 100
-      const Et = (Number(targetE) || 0) / 100
-      const needs = Et > Ec ? 'ethanol' : 'gasoline'
-      const reason = needs === 'gasoline' && Et < selectedGas.ethanolFraction
-        ? `Impossível atingir E${round(Et*100,1)} adicionando ${selectedGas.name.replace(/ \(.*\)/,'')} (mínimo ≈ ${round(selectedGas.ethanolFraction*100,0)}%). Drene combustível ou use gasolina E0.`
-        : 'Alvo inalcançável apenas adicionando combustível.'
-      return { mode: needs, result: { addAmount: 0, finalVolume: currentVolumeLiters, finalEPercent: currentE, valid: false, reason } }
-    }
-
-    // Choose smallest positive addition
-    options.sort((a, b) => a.result.addAmount - b.result.addAmount)
-    return options[0]
-  }, [ethanolCandidate, gasolineCandidate, currentE, targetE, currentVolumeLiters, selectedGas])
-
-  const chosenMode = decision.mode
-  const result = decision.result
-
-  const ethanolToAddL = chosenMode === 'ethanol' ? result.addAmount : 0
-  const gasolineToAddL = chosenMode === 'gasoline' ? result.addAmount : 0
-
-  const ethanolAddInUnit = fromBaseLiters(ethanolToAddL, unit === 'gal' ? 'gal' : 'L')
-  const gasolineAddInUnit = fromBaseLiters(gasolineToAddL, unit === 'gal' ? 'gal' : 'L')
-  const finalVolumeInUnit = fromBaseLiters(result.finalVolume, unit === 'gal' ? 'gal' : 'L')
-
-  const ratioEthanol = useMemo(() => {
-    const finalV = Math.max(0.0001, result.finalVolume)
-    const Ec = (Number(currentE) || 0) / 100
-    const finalEthanolVolume = currentVolumeLiters * Ec + (chosenMode === 'ethanol' ? ethanolToAddL * 1.0 : gasolineToAddL * selectedGas.ethanolFraction)
-    return Math.max(0, Math.min(1, finalEthanolVolume / finalV))
-  }, [result.finalVolume, currentVolumeLiters, currentE, ethanolToAddL, gasolineToAddL, chosenMode, selectedGas.ethanolFraction])
+  const ratioEthanol = useMemo(() => Math.max(0, Math.min(1, (Number(targetE) || 0) / 100)), [targetE])
 
   function handleSavePreset() {
     const name = `E${targetE}`
@@ -141,21 +105,15 @@ export default function App() {
     <div className="container">
       <div className="header-min">
         <div className="brand-logo" />
-        <div className="brand-title">Calculadora de Mistura</div>
+        <div className="brand-title">Mistura do Zero</div>
       </div>
 
       <section className="panel">
         <div className="panel-body">
           <div className="row">
             <div className="control">
-              <label>Combustível no tanque ({unitLabel})</label>
-              <input className="input" type="number" min="0" step="0.1" value={currentVolumeInput} onChange={(e)=> setCurrentVolumeInput(e.target.value)} />
-            </div>
-
-            <div className="control">
-              <label>E% atual</label>
-              <input className="input" type="number" min="0" max="100" step="1" value={currentE} onChange={(e)=> setCurrentE(e.target.value)} />
-              <input className="range" type="range" min="0" max="100" step="1" value={currentE} onChange={(e)=> setCurrentE(e.target.value)} />
+              <label>Volume final desejado ({unitLabel})</label>
+              <input className="input" type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
             </div>
 
             <div className="control">
@@ -169,7 +127,7 @@ export default function App() {
               <select className="select" value={brGasTypeId} onChange={(e)=> setBrGasTypeId(e.target.value)}>
                 {BR_GAS_TYPES.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
               </select>
-              <div className="help">A comum/aditivada ≈ 27% etanol; a Podium/Premium ≈ 25%.</div>
+              <div className="help">Comum/Aditivada ≈ 27% etanol; Premium/Podium ≈ 25%.</div>
             </div>
 
             <div className="inline">
@@ -196,20 +154,20 @@ export default function App() {
 
             <div className="results">
               <div className="result">
-                <div className="label">Adicionar</div>
-                <div className="value">{chosenMode === 'ethanol' ? 'Etanol (E100)' : `${selectedGas.name}`}</div>
+                <div className="label">Etanol (E100) a adicionar</div>
+                <div className="value">{pretty(ethanolInUnit)} {unitLabel}</div>
               </div>
               <div className="result">
-                <div className="label">Quantidade</div>
-                <div className="value">{chosenMode === 'ethanol' ? pretty(ethanolAddInUnit) : pretty(gasolineAddInUnit)} {unitLabel}</div>
-              </div>
-              <div className="result">
-                <div className="label">Volume final</div>
-                <div className="value">{pretty(finalVolumeInUnit)} {unitLabel}</div>
+                <div className="label">Gasolina a adicionar</div>
+                <div className="value">{pretty(gasolineInUnit)} {unitLabel}</div>
               </div>
               <div className="result">
                 <div className="label">E% final</div>
                 <div className="value">{round(result.finalEPercent, 1)}%</div>
+              </div>
+              <div className="result">
+                <div className="label">Volume final</div>
+                <div className="value">{pretty(fromBaseLiters(totalVolumeLiters, unit === 'gal' ? 'gal' : 'L'))} {unitLabel}</div>
               </div>
             </div>
 
@@ -217,7 +175,7 @@ export default function App() {
               <div className="help">{result.reason}</div>
             )}
 
-            <div className="footer-note">Leva em conta o etanol presente na gasolina brasileira selecionada.</div>
+            <div className="footer-note">Mistura a partir do tanque vazio, usando E100 e gasolina BR selecionada.</div>
           </div>
         </div>
       </section>
