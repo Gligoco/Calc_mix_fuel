@@ -126,6 +126,12 @@ export default function App() {
                   <button className="rp-step" onClick={()=> setTargetE(v => String(Math.min(100, (Number(v)||0) + 1)))}>+</button>
                 </div>
               </div>
+              {/* Ethanol bar directly under target field */}
+              <div className="rp-tank" title={`Etanol ${ethanolWidth}`}>
+                <div className="eth" style={{ width: ethanolWidth }} />
+                <div className="label">E{round(Number(targetE)||0,0)}</div>
+              </div>
+
               <div className="rp-row">
                 <div className="rp-label">Tipo de gasolina (BR)</div>
                 <select className="rp-select" value={brGasTypeId} onChange={(e)=> setBrGasTypeId(e.target.value)}>
@@ -153,35 +159,12 @@ export default function App() {
             </div>
           </div>
         </div>
-
-        <div className="rp-tank" title={`Etanol ${ethanolWidth}`}>
-          <div className="eth" style={{ width: ethanolWidth }} />
-          <div className="label">E{round(Number(targetE)||0,0)}</div>
-        </div>
       </div>
 
-      <div className="rp-results">
-        <div className="rp-results-left">
-          {hasCalculated && (
-            <>
-              <div className="rp-kpi">
-                <div className="k-label">Etanol (E100)</div>
-                <div className="k-value results-value">{pretty(ethanolInUnit)} {unitLabel}</div>
-              </div>
-              <div className="rp-kpi">
-                <div className="k-label">Gasolina</div>
-                <div className="k-value results-value">{pretty(gasolineInUnit)} {unitLabel}</div>
-              </div>
-              <div className="rp-kpi">
-                <div className="k-label">E% final</div>
-                <div className="k-value results-value">{round(result.finalEPercent, 1)}%</div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      {/* Results footer removed per request */}
 
       <div className="rp-footer-note">Desenvolvido por Gabriel Cappello Machado.</div>
+      <div className="rp-footer-link"><a href="https://www.instagram.com/autostatt_" target="_blank" rel="noopener noreferrer">meu Instagram</a></div>
     </div>
   )
 }
