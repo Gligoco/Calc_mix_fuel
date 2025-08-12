@@ -51,8 +51,8 @@ body {
 .rp-group-title { font-family: 'Rajdhani', Inter; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 14px; margin-bottom: 8px; }
 
 /* Inputs */
-.rp-inputs-wrapper { min-height: 0; overflow: hidden; }
-.rp-inputs { display: grid; gap: 10px; overflow: auto; max-height: 52vh; padding-right: 2px; }
+.rp-inputs-wrapper { min-height: 0; overflow: auto; }
+.rp-inputs { display: grid; gap: 10px; max-height: none; padding-right: 2px; }
 .rp-row { display: grid; gap: 6px; }
 .rp-label { font-size: clamp(11px, 2.6vw, 13px); color: var(--rp-muted); text-transform: uppercase; letter-spacing: .06em; line-height: 1.2; }
 .input-wrap { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; }
@@ -98,7 +98,7 @@ body {
 .rp-results::before { content: none; }
 
 /* Footer small note */
-.rp-footer-note { font-size: 11px; color: var(--rp-muted); text-align: center; margin-top: 6px; }
+.rp-footer-note { font-size: 11px; color: var(--rp-muted); text-align: center; margin: 12px auto 4px; padding: 0 12px; }
 
 /* Footer link */
 .rp-footer-link { text-align: center; margin-top: 4px; }
