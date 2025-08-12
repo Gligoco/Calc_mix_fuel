@@ -66,12 +66,7 @@ export default function App() {
   const [targetE, setTargetE] = useLocalStorage('targetE', 50)
   const [totalVolumeInput, setTotalVolumeInput] = useLocalStorage('totalVolume', 40)
   const [brGasTypeId, setBrGasTypeId] = useLocalStorage('br_gas_type', 'E27')
-  const [presets, setPresets] = useLocalStorage('presets', [
-    { id: 'E30', name: 'E30', targetE: 30 },
-    { id: 'E50', name: 'E50', targetE: 50 },
-    { id: 'E85', name: 'E85', targetE: 85 },
-  ])
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [hasCalculated, setHasCalculated] = useState(false)
 
   const selectedGas = BR_GAS_TYPES.find(g => g.id === brGasTypeId) || BR_GAS_TYPES[0]
 
@@ -87,49 +82,28 @@ export default function App() {
 
   const ratioEthanol = useMemo(() => Math.max(0, Math.min(1, (Number(targetE) || 0) / 100)), [targetE])
 
-  function handleSavePreset() {
-    const name = `E${targetE}`
-    const id = `${name}-${Date.now()}`
-    setPresets([{ id, name, targetE: Number(targetE) }, ...presets].slice(0, 12))
-  }
-
   const unitLabel = unit === 'gal' ? 'gal' : 'L'
   const ethanolWidth = `${round(ratioEthanol * 100, 1)}%`
   const pretty = (v) => (v === Infinity ? '∞' : round(v, unit === 'gal' ? 2 : 2))
-  const segIndex = 1
 
   return (
     <div className="rp-app">
-      <div className="rp-topbar">
-        <div className="rp-top-left">
-          <div className="rp-logo" />
-          <div className="rp-title">Race Performance</div>
-        </div>
+      <div className="rp-topbar" role="banner">
+        <img className="rp-logo-img" src="/logo.svg" alt="Race Performance logo" />
+        <div className="rp-title">Calculadora de mistura</div>
+        <div />
       </div>
 
       <div className="rp-shell">
-        <div className="rp-seg" style={{ ['--seg-index']: segIndex }}>
-          <div className="highlight" />
-          <button className="item" aria-selected={false}>Tanque vazio</button>
-          <button className="item" aria-selected={true}>Mistura</button>
-          <button className="item" aria-selected={false}>Avançado</button>
-        </div>
-
-        <div className="rp-chips">
-          {presets.slice(0,3).map(p => (
-            <button key={p.id} className="rp-chip" aria-pressed={Number(targetE) === p.targetE} onClick={()=> setTargetE(p.targetE)}>{p.name}</button>
-          ))}
-        </div>
-
         <div className="rp-inputs-wrapper">
           <div className="rp-inputs">
             <div className="rp-group">
               <div className="rp-group-title">Tank Info</div>
               <div className="rp-row">
-                <div className="rp-label">Volume final ({unitLabel})</div>
-                <div className="rp-field">
+                <div className="rp-label">Final desired volume ({unitLabel})</div>
+                <div className="rp-field" style={{ gridTemplateColumns: '28px 1fr 28px' }}>
+                  <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String(Math.max(0, (Number(v)||0) - (unit==='gal'?0.5:1))))}>−</button>
                   <input type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
-                  <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String(Math.max(0, (Number(v)||0) - (unit==='gal'?0.5:1))))}>-</button>
                   <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String((Number(v)||0) + (unit==='gal'?0.5:1)))}>+</button>
                 </div>
               </div>
@@ -146,9 +120,9 @@ export default function App() {
               <div className="rp-group-title">Target Info</div>
               <div className="rp-row">
                 <div className="rp-label">E% desejado</div>
-                <div className="rp-field">
+                <div className="rp-field" style={{ gridTemplateColumns: '28px 1fr 28px' }}>
+                  <button className="rp-step" onClick={()=> setTargetE(v => String(Math.max(0, (Number(v)||0) - 1)))}>−</button>
                   <input type="number" min="0" max="100" step="1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
-                  <button className="rp-step" onClick={()=> setTargetE(v => String(Math.max(0, (Number(v)||0) - 1)))}>-</button>
                   <button className="rp-step" onClick={()=> setTargetE(v => String(Math.min(100, (Number(v)||0) + 1)))}>+</button>
                 </div>
               </div>
@@ -161,15 +135,6 @@ export default function App() {
                 </div>
                 <div className="rp-label" style={{ fontSize: 11 }}>Comum/Aditivada ≈ 27% • Premium/Podium ≈ 25%</div>
               </div>
-            </div>
-
-            <div className="rp-group">
-              <button className="rp-chip" aria-pressed={false} onClick={()=> setShowAdvanced(v=>!v)}>{showAdvanced ? 'Advanced ▾' : 'Advanced ▸'}</button>
-              {showAdvanced && (
-                <div className="rp-row" style={{ marginTop: 8 }}>
-                  <button className="rp-chip" aria-pressed={false} onClick={handleSavePreset}>Salvar preset E{targetE}</button>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -184,21 +149,32 @@ export default function App() {
 
       <div className="rp-results">
         <div className="rp-kpis">
-          <div className="rp-kpi">
-            <div className="k-label">Etanol (E100)</div>
-            <div className="k-value">{pretty(ethanolInUnit)} {unitLabel}</div>
-          </div>
-          <div className="rp-kpi">
-            <div className="k-label">Gasolina</div>
-            <div className="k-value">{pretty(gasolineInUnit)} {unitLabel}</div>
-          </div>
-          <div className="rp-kpi">
-            <div className="k-label">E% final</div>
-            <div className="k-value">{round(result.finalEPercent, 1)}%</div>
-          </div>
+          {hasCalculated && (
+            <>
+              <div className="rp-kpi">
+                <div className="k-label">Etanol (E100)</div>
+                <div className="k-value">{pretty(ethanolInUnit)} {unitLabel}</div>
+              </div>
+              <div className="rp-kpi">
+                <div className="k-label">Gasolina</div>
+                <div className="k-value">{pretty(gasolineInUnit)} {unitLabel}</div>
+              </div>
+              <div className="rp-kpi">
+                <div className="k-label">E% final</div>
+                <div className="k-value">{round(result.finalEPercent, 1)}%</div>
+              </div>
+              <a className="rp-instagram" href="[INSTAGRAM_URL]" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm5 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" stroke="currentColor" strokeWidth="1" fill="none"/>
+                </svg>
+              </a>
+            </>
+          )}
         </div>
-        <button className="rp-cta" onClick={handleSavePreset}>Salvar</button>
+        <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
       </div>
+
+      <div className="rp-footer-note">Propriedade intelectual de Gabriel Cappello Machado.</div>
     </div>
   )
 }
