@@ -71,20 +71,20 @@ export default function App() {
   const selectedGas = BR_GAS_TYPES.find(g => g.id === brGasTypeId) || BR_GAS_TYPES[0]
 
   const totalVolumeLiters = useMemo(
-    () => toBaseLiters(Number(totalVolumeInput) || 0, unit === 'gal' ? 'gal' : 'L'),
-    [totalVolumeInput, unit]
+    () => toBaseLiters(Number(totalVolumeInput) || 0, 'L'),
+    [totalVolumeInput]
   )
 
   const result = useMemo(() => computeFromEmpty(totalVolumeLiters, Number(targetE) || 0, selectedGas.ethanolFraction), [totalVolumeLiters, targetE, selectedGas.ethanolFraction])
 
-  const ethanolInUnit = fromBaseLiters(result.addEthanol, unit === 'gal' ? 'gal' : 'L')
-  const gasolineInUnit = fromBaseLiters(result.addGasoline, unit === 'gal' ? 'gal' : 'L')
+  const ethanolInUnit = fromBaseLiters(result.addEthanol, 'L')
+  const gasolineInUnit = fromBaseLiters(result.addGasoline, 'L')
 
   const ratioEthanol = useMemo(() => Math.max(0, Math.min(1, (Number(targetE) || 0) / 100)), [targetE])
 
-  const unitLabel = unit === 'gal' ? 'gal' : 'L'
+  const unitLabel = 'L'
   const ethanolWidth = `${round(ratioEthanol * 100, 1)}%`
-  const pretty = (v) => (v === Infinity ? '∞' : round(v, unit === 'gal' ? 1 : 1))
+  const pretty = (v) => (v === Infinity ? '∞' : round(v, 1))
 
   function handleCalc() { setHasCalculated(true) }
   function handleReset() { window.location.reload() }
@@ -92,7 +92,7 @@ export default function App() {
   return (
     <div className="rp-app">
       <div className="rp-topbar" role="banner">
-        <div />
+        <img className="rp-logo-img" src="/assets/IMG_6442.jpeg" alt="Race Performance" />
         <div className="rp-header-stack">
           <div className="rp-title">Calculadora de mistura</div>
           <div className="rp-subtitle">
@@ -111,19 +111,13 @@ export default function App() {
             <div className="rp-group">
               <div className="rp-group-title">Tanque</div>
               <div className="rp-row">
-                <div className="rp-label">Volume final desejado ({unitLabel === 'gal' ? 'gal' : 'L'})</div>
+                <div className="rp-label">Volume final desejado (L)</div>
                 <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
                   <input className="rp-input" type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
-                  <input className="rp-slider" type="range" min="0" max="200" step="0.1" value={Number(unit === 'gal' ? totalVolumeInput : totalVolumeInput)} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
+                  <input className="rp-slider" type="range" min="0" max="200" step="0.1" value={Number(totalVolumeInput)} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
                 </div>
               </div>
-              <div className="rp-row">
-                <div className="rp-label">Unidades</div>
-                <div className="input-wrap" style={{ gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <button className="rp-chip" aria-pressed={unit==='L'} onClick={()=> setUnit('L')}>Litros</button>
-                  <button className="rp-chip" aria-pressed={unit==='gal'} onClick={()=> setUnit('gal')}>Galões</button>
-                </div>
-              </div>
+              {/* Units toggle removed (galões) */}
             </div>
 
             <div className="rp-group">
