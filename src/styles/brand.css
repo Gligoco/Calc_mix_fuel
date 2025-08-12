@@ -130,16 +130,15 @@ body {
 .results-kpis .label { font-size: 12px; color: var(--rp-muted); text-transform: uppercase; letter-spacing: .08em; }
 .results-kpis .value { font-size: clamp(18px, 4.8vw, 26px); font-weight: 800; }
 
-/* Fuel animation (SVG-like, CSS driven) */
-.fuel-anim { width: 240px; height: 150px; position: relative; margin: 6px auto 0; }
-.fuel-anim .can { position: absolute; inset: 0; border: 2px solid var(--rp-border); border-radius: 12px; background: #0f0f10; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.02); }
-.fuel-anim .fluid { position: absolute; left: 6px; right: 6px; bottom: 6px; top: 26px; border-radius: 8px; overflow: hidden; }
-.fuel-anim .gas { position: absolute; bottom: 0; left: 0; right: 0; height: var(--gas, 50%); background: #1a1a1a; transition: height 400ms ease; }
-.fuel-anim .eth { position: absolute; bottom: var(--gas, 50%); left: 0; right: 0; height: var(--eth, 50%); background: var(--rp-red); transition: height 400ms ease; }
-.fuel-anim .nozzle { position: absolute; width: 40px; height: 16px; right: -4px; top: -4px; background: #2a2a2a; transform: rotate(12deg); border-radius: 4px; }
-.fuel-anim[data-play="true"] .stream { animation: stream 700ms ease forwards; }
-.fuel-anim .stream { position: absolute; width: 6px; height: 0; right: 12px; top: 0; background: var(--rp-red); border-radius: 3px; }
-@keyframes stream { from { height: 0; } to { height: 28px; } }
+/* Fuel SVG animation */
+.fuel-svg { width: 100%; max-width: 320px; height: auto; display: block; margin: 8px auto 0; }
+.fuel-svg .tank { fill: none; stroke: var(--rp-border); stroke-width: 3; }
+.fuel-svg .gas-layer { transform-origin: 100px 160px; transform-box: fill-box; transition: transform 1.8s cubic-bezier(.2,.7,.3,1); fill: #1A1A1A; }
+.fuel-svg .eth-layer { transform-origin: 100px 160px; transform-box: fill-box; transition: transform 1.8s cubic-bezier(.2,.7,.3,1); fill: var(--rp-red); }
+.fuel-svg.play .gas-layer, .fuel-svg.play .eth-layer { will-change: transform; }
+@media (prefers-reduced-motion: reduce) {
+  .fuel-svg .gas-layer, .fuel-svg .eth-layer { transition: none; }
+}
 
 /* Desktop */
 @media (min-width: 768px) { .rp-app { max-width: 480px; margin: 0 auto; border-left: 1px solid var(--rp-border); border-right: 1px solid var(--rp-border); } }

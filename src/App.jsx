@@ -89,6 +89,10 @@ export default function App() {
   function handleCalc() { setHasCalculated(true) }
   function handleReset() { window.location.reload() }
 
+  // Proportions for SVG animation (height scale 0..1)
+  const ethanolPct = Math.max(0, Math.min(1, Number(targetE) / 100))
+  const gasPct = 1 - ethanolPct
+
   return (
     <div className="rp-app">
       <div className="rp-topbar" role="banner">
@@ -173,15 +177,16 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="fuel-anim" data-play={hasCalculated} style={{ ['--gas']: `${Math.max(0, Math.min(100, 100 - Number(targetE)))}%`, ['--eth']: `${Math.max(0, Math.min(100, Number(targetE)))}%` }}>
-                    <div className="can" />
-                    <div className="fluid">
-                      <div className="gas" style={{ height: `calc((100%)*${Math.max(0, Math.min(100, 100 - Number(targetE)))} / 100)` }} />
-                      <div className="eth" style={{ height: `calc((100%)*${Math.max(0, Math.min(100, Number(targetE)))} / 100)` }} />
-                    </div>
-                    <div className="nozzle" />
-                    <div className="stream" />
-                  </div>
+                  {/* SVG vector animation */}
+                  <svg className={`fuel-svg ${hasCalculated ? 'play' : ''}`} viewBox="0 0 200 180" role="img" aria-label="Animação de enchimento do combustível">
+                    <rect x="10" y="10" width="180" height="160" rx="12" ry="12" className="tank" />
+                    {/* Gasoline layer (bottom) */}
+                    <rect className="gas-layer" x="16" width="168" y={170 - 150} height={150}
+                      style={{ transform: `scaleY(${gasPct}) translateY(${(1 - gasPct) * 150}px)` }} />
+                    {/* Ethanol layer (top of gasoline) */}
+                    <rect className="eth-layer" x="16" width="168" y={170 - 150} height={150}
+                      style={{ transform: `scaleY(${ethanolPct}) translateY(${(1 - ethanolPct) * 150}px)` }} />
+                  </svg>
                 </div>
               )}
             </div>
