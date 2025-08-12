@@ -101,15 +101,15 @@ export default function App() {
               <div className="rp-group-title">Tank Info</div>
               <div className="rp-row">
                 <div className="rp-label">Final desired volume ({unitLabel})</div>
-                <div className="rp-field" style={{ gridTemplateColumns: '28px 1fr 28px' }}>
+                <div className="input-wrap">
                   <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String(Math.max(0, (Number(v)||0) - (unit==='gal'?0.5:1))))}>−</button>
-                  <input type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
+                  <input className="rp-input" type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
                   <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String((Number(v)||0) + (unit==='gal'?0.5:1)))}>+</button>
                 </div>
               </div>
               <div className="rp-row">
                 <div className="rp-label">Unidades</div>
-                <div className="rp-field" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <div className="input-wrap" style={{ gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <button className="rp-chip" aria-pressed={unit==='L'} onClick={()=> setUnit('L')}>L</button>
                   <button className="rp-chip" aria-pressed={unit==='gal'} onClick={()=> setUnit('gal')}>gal</button>
                 </div>
@@ -120,19 +120,17 @@ export default function App() {
               <div className="rp-group-title">Target Info</div>
               <div className="rp-row">
                 <div className="rp-label">E% desejado</div>
-                <div className="rp-field" style={{ gridTemplateColumns: '28px 1fr 28px' }}>
+                <div className="input-wrap">
                   <button className="rp-step" onClick={()=> setTargetE(v => String(Math.max(0, (Number(v)||0) - 1)))}>−</button>
-                  <input type="number" min="0" max="100" step="1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
+                  <input className="rp-input" type="number" min="0" max="100" step="1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
                   <button className="rp-step" onClick={()=> setTargetE(v => String(Math.min(100, (Number(v)||0) + 1)))}>+</button>
                 </div>
               </div>
               <div className="rp-row">
                 <div className="rp-label">Gasolina (BR)</div>
-                <div className="rp-field" style={{ gridTemplateColumns: '1fr' }}>
-                  <select value={brGasTypeId} onChange={(e)=> setBrGasTypeId(e.target.value)}>
-                    {BR_GAS_TYPES.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
-                  </select>
-                </div>
+                <select className="rp-select" value={brGasTypeId} onChange={(e)=> setBrGasTypeId(e.target.value)}>
+                  {BR_GAS_TYPES.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
+                </select>
                 <div className="rp-label" style={{ fontSize: 11 }}>Comum/Aditivada ≈ 27% • Premium/Podium ≈ 25%</div>
               </div>
             </div>
@@ -143,34 +141,34 @@ export default function App() {
           <div className="eth" style={{ width: ethanolWidth }} />
           <div className="label">E{round(Number(targetE)||0,0)}</div>
         </div>
-
-        <div style={{ height: 4 }} />
       </div>
 
       <div className="rp-results">
-        <div className="rp-kpis">
+        <div className="rp-results-left">
           {hasCalculated && (
             <>
               <div className="rp-kpi">
                 <div className="k-label">Etanol (E100)</div>
-                <div className="k-value">{pretty(ethanolInUnit)} {unitLabel}</div>
+                <div className="k-value results-value">{pretty(ethanolInUnit)} {unitLabel}</div>
               </div>
               <div className="rp-kpi">
                 <div className="k-label">Gasolina</div>
-                <div className="k-value">{pretty(gasolineInUnit)} {unitLabel}</div>
+                <div className="k-value results-value">{pretty(gasolineInUnit)} {unitLabel}</div>
               </div>
               <div className="rp-kpi">
                 <div className="k-label">E% final</div>
-                <div className="k-value">{round(result.finalEPercent, 1)}%</div>
+                <div className="k-value results-value">{round(result.finalEPercent, 1)}%</div>
               </div>
-              <a className="rp-instagram" href="[INSTAGRAM_URL]" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm5 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" stroke="currentColor" strokeWidth="1" fill="none"/>
-                </svg>
-              </a>
             </>
           )}
         </div>
+        {hasCalculated && (
+          <a className="rp-instagram" href="https://www.instagram.com/raceperformance_?igsh=MWY1N25vZ3hmMTdsZA==" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm5 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" stroke="currentColor" strokeWidth="1" fill="none"/>
+            </svg>
+          </a>
+        )}
         <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
       </div>
 
