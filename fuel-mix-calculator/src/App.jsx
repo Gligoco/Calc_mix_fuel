@@ -126,7 +126,6 @@ export default function App() {
                   <button className="rp-step" onClick={()=> setTargetE(v => String(Math.min(100, (Number(v)||0) + 1)))}>+</button>
                 </div>
               </div>
-              {/* Ethanol bar directly under target field */}
               <div className="rp-tank" title={`Etanol ${ethanolWidth}`}>
                 <div className="eth" style={{ width: ethanolWidth }} />
                 <div className="label">E{round(Number(targetE)||0,0)}</div>
@@ -140,7 +139,6 @@ export default function App() {
                 <div className="rp-label" style={{ fontSize: 11 }}>Comum/Aditivada ≈ 27% • Premium/Podium ≈ 25%</div>
               </div>
 
-              {/* CTA row appears below Alvo group after first calculation */}
               <div className="cta-row">
                 {!hasCalculated && (
                   <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
@@ -161,10 +159,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* Results footer removed per request */}
-
-      <div className="rp-footer-note">Desenvolvido por Gabriel Cappello Machado.</div>
-      <div className="rp-footer-link"><a href="https://www.instagram.com/autostatt_" target="_blank" rel="noopener noreferrer">meu Instagram</a></div>
+      <div className="rp-footer">
+        <div className="rp-footer-note">Desenvolvido por Gabriel Cappello Machado.</div>
+        <div className="rp-footer-link"><a href="https://www.instagram.com/autostatt_" target="_blank" rel="noopener noreferrer">meu Instagram</a></div>
+      </div>
     </div>
   )
 }
