@@ -89,7 +89,7 @@ export default function App() {
   return (
     <div className="rp-app">
       <div className="rp-topbar" role="banner">
-        <img className="rp-logo-img" src="/assets/logo-race.svg?v=1" alt="Race Performance logo" />
+        <div />
         <div className="rp-title">Calculadora de mistura</div>
         <div />
       </div>
@@ -133,6 +133,23 @@ export default function App() {
                 </select>
                 <div className="rp-label" style={{ fontSize: 11 }}>Comum/Aditivada ≈ 27% • Premium/Podium ≈ 25%</div>
               </div>
+
+              {/* CTA row appears below Alvo group after first calculation */}
+              <div className="cta-row">
+                {!hasCalculated && (
+                  <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
+                )}
+                {hasCalculated && (
+                  <>
+                    <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
+                    <a className="rp-cta-ig"
+                      href="https://www.instagram.com/raceperformance_?igsh=MWY1N25vZ3hmMTdsZA=="
+                      target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                      @raceperformance_
+                    </a>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -162,14 +179,6 @@ export default function App() {
             </>
           )}
         </div>
-        <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
-        {hasCalculated && (
-          <a className="rp-cta-ig"
-             href="https://www.instagram.com/raceperformance_?igsh=MWY1N25vZ3hmMTdsZA=="
-             target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-            @raceperformance_
-          </a>
-        )}
       </div>
 
       <div className="rp-footer-note">Desenvolvido por Gabriel Cappello Machado.</div>
