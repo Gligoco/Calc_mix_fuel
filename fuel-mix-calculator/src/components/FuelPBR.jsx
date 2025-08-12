@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
 
 export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMotion = false }) {
   const mountRef = useRef(null)
@@ -19,7 +21,7 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.0
+    renderer.toneMappingExposure = 1.05
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(mount.clientWidth, mount.clientHeight)
     mount.appendChild(renderer.domElement)
@@ -28,34 +30,86 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
     scene.background = null
 
     const camera = new THREE.PerspectiveCamera(35, mount.clientWidth / mount.clientHeight, 0.1, 100)
-    camera.position.set(0.7, 0.9, 2.3)
+    camera.position.set(0.75, 0.95, 2.35)
     camera.lookAt(0, 0.9, 0)
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x202020, 0.85)
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x202020, 0.9)
     scene.add(hemi)
     const key = new THREE.DirectionalLight(0xffffff, 0.9)
     key.position.set(3, 5, 4)
     scene.add(key)
 
-    // Jerrycan proxy
+    // Environment (HDR) optional
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    new RGBELoader().setPath('/assets/hdr/').load('studio_2k.hdr', (hdr) => {
+      const env = pmrem.fromEquirectangular(hdr).texture
+      scene.environment = env
+      hdr.dispose?.()
+      pmrem.dispose()
+    }, undefined, () => {/* silently ignore if missing */})
+
+    // Materials
+    const canMat = new THREE.MeshStandardMaterial({ color: 0x262a2f, metalness: 0.6, roughness: 0.35 })
+    const hoseMat = new THREE.MeshStandardMaterial({ color: 0x151515, metalness: 0.2, roughness: 0.9 })
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0xbfc5cc, metalness: 0.9, roughness: 0.25 })
+    const gasMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#1A1A1A'), metalness: 0, roughness: 0.7, transmission: 0.05, clearcoat: 0.2, envMapIntensity: 0.6 })
+    const ethanolMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#E10600'), metalness: 0, roughness: 0.6, transmission: 0.1, clearcoat: 0.25, envMapIntensity: 0.8 })
+
+    const root = new THREE.Group()
+    scene.add(root)
+
+    // Defaults (proxy) inner fluid volume
+    let innerWidth = 1.0
+    let innerHeight = 1.3
+    let innerDepth = 0.36
+    let innerY = 0.25 + innerHeight / 2
+
     const canGroup = new THREE.Group()
-    scene.add(canGroup)
+    root.add(canGroup)
 
-    const canMat = new THREE.MeshStandardMaterial({ color: 0x262a2f, metalness: 0.5, roughness: 0.35 })
-    const canGeo = new THREE.BoxGeometry(1.2, 1.6, 0.5)
-    const canMesh = new THREE.Mesh(canGeo, canMat)
-    canMesh.position.y = 0.8
-    canGroup.add(canMesh)
+    // Try load GLB jerrycan
+    const gltfLoader = new GLTFLoader()
+    gltfLoader.load('/assets/models/jerrycan.glb', (gltf) => {
+      const model = gltf.scene
+      model.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false } })
+      model.scale.set(1, 1, 1)
+      model.position.y = 0
+      canGroup.add(model)
 
-    // Inner fluid bounds
-    const innerWidth = 1.0
-    const innerHeight = 1.3
-    const innerDepth = 0.36
-    const innerY = 0.25 + innerHeight / 2
+      // Compute inner bounds heuristically from model bbox
+      const bbox = new THREE.Box3().setFromObject(model)
+      const size = new THREE.Vector3(); bbox.getSize(size)
+      innerWidth = Math.max(0.6, size.x * 0.7)
+      innerHeight = Math.max(0.9, size.y * 0.75)
+      innerDepth = Math.max(0.25, size.z * 0.7)
+      innerY = bbox.min.y + (size.y * 0.2) + innerHeight / 2
+    }, undefined, () => {
+      // Fallback proxy can geometry
+      const canGeo = new THREE.BoxGeometry(1.2, 1.6, 0.5)
+      const canMesh = new THREE.Mesh(canGeo, canMat)
+      canMesh.position.y = 0.8
+      canGroup.add(canMesh)
+    })
 
-    // Fluids
-    const gasMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#1A1A1A'), metalness: 0, roughness: 0.7, transmission: 0.05, clearcoat: 0.2, envMapIntensity: 0.5 })
-    const ethanolMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#E10600'), metalness: 0, roughness: 0.6, transmission: 0.1, clearcoat: 0.25, envMapIntensity: 0.7 })
+    // Hose + nozzle: try GLB, fall back to parametric
+    gltfLoader.load('/assets/models/nozzle.glb', (gltf) => {
+      const nz = gltf.scene
+      nz.scale.set(1, 1, 1)
+      nz.position.set(0.25, 1.52, 0)
+      root.add(nz)
+    }, undefined, () => {
+      const start = new THREE.Vector3(1.3, 1.6, 0.2)
+      const end = new THREE.Vector3(0.25, 1.52, 0.0)
+      const mid = new THREE.Vector3(0.9, 1.85, 0.25)
+      const curve = new THREE.QuadraticBezierCurve3(start, mid, end)
+      const tube = new THREE.TubeGeometry(curve, 32, 0.03, 12, false)
+      root.add(new THREE.Mesh(tube, hoseMat))
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.15, 20), metalMat)
+      barrel.rotation.z = Math.PI / 2; barrel.position.set(0.37, 1.52, 0)
+      root.add(barrel)
+    })
+
+    // Fluid layers (created after a brief tick to let potential model load adjust bounds)
     const gasGeo = new THREE.BoxGeometry(innerWidth, innerHeight, innerDepth)
     const ethGeo = new THREE.BoxGeometry(innerWidth, innerHeight, innerDepth)
     const gasMesh = new THREE.Mesh(gasGeo, gasMat)
@@ -64,45 +118,18 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
     ethMesh.position.set(0, innerY - innerHeight / 2, 0)
     gasMesh.scale.set(1, 0.0001, 1)
     ethMesh.scale.set(1, 0.0001, 1)
-    canGroup.add(gasMesh)
-    canGroup.add(ethMesh)
+    root.add(gasMesh)
+    root.add(ethMesh)
 
-    // Hose + nozzle
-    const hoseMat = new THREE.MeshStandardMaterial({ color: 0x151515, metalness: 0.2, roughness: 0.9 })
-    const start = new THREE.Vector3(1.3, 1.6, 0.2)
-    const end = new THREE.Vector3(0.25, 1.52, 0.0)
-    const mid = new THREE.Vector3(0.9, 1.85, 0.25)
-    const curve = new THREE.QuadraticBezierCurve3(start, mid, end)
-    const tube = new THREE.TubeGeometry(curve, 32, 0.03, 12, false)
-    const hose = new THREE.Mesh(tube, hoseMat)
-    scene.add(hose)
-
-    const nozzleGroup = new THREE.Group()
-    nozzleGroup.position.copy(end)
-    scene.add(nozzleGroup)
-    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.06), new THREE.MeshStandardMaterial({ color: 0x3a3f45, metalness: 0.6, roughness: 0.4 }))
-    grip.rotation.z = -0.3
-    nozzleGroup.add(grip)
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0xbfc5cc, metalness: 0.9, roughness: 0.2 }))
-    barrel.rotation.z = Math.PI / 2
-    barrel.position.x = 0.12
-    nozzleGroup.add(barrel)
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.06, 16), new THREE.MeshStandardMaterial({ color: 0xdde2e7, metalness: 0.9, roughness: 0.2 }))
-    tip.rotation.z = Math.PI / 2
-    tip.position.x = 0.2
-    nozzleGroup.add(tip)
-
-    // Stream
-    const streamMat = new THREE.MeshStandardMaterial({ color: 0xE10600, emissive: 0x190000, metalness: 0, roughness: 0.4 })
-    const streamGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.001, 10)
-    const stream = new THREE.Mesh(streamGeo, streamMat)
-    stream.position.copy(end.clone().add(new THREE.Vector3(0.11, -0.06, 0)))
+    // Stream (simple)
+    const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.001, 12), new THREE.MeshStandardMaterial({ color: 0xE10600, emissive: 0x180000 }))
+    stream.position.set(0.37, 1.52, 0)
     stream.rotation.z = Math.PI / 2
-    scene.add(stream)
+    root.add(stream)
 
     // Animate fill
     let startTs = null
-    const duration = reducedMotion ? 0 : 1800
+    const duration = reducedMotion ? 0 : 2000
     const targetGas = Math.max(0, Math.min(1, 1 - ethanolFraction))
     const targetEth = Math.max(0, Math.min(1, ethanolFraction))
 
@@ -115,10 +142,9 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
       gasMesh.scale.y = Math.max(0.0001, targetGas * f)
       ethMesh.scale.y = Math.max(0.0001, targetEth * f)
 
-      // Stream grows then hides near the end
-      const streamLen = 0.5 * (1 - (t > 0.85 ? (t - 0.85) / 0.15 : 0))
+      const streamLen = 0.55 * (1 - (t > 0.9 ? (t - 0.9) / 0.1 : 0))
       stream.scale.set(1, Math.max(0.001, streamLen), 1)
-      stream.visible = t < 0.98
+      stream.visible = t < 0.99
 
       renderer.render(scene, camera)
       if (t < 1) rafRef.current = requestAnimationFrame(animate)
@@ -126,7 +152,7 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
 
     function onResize() {
       const w = mount.clientWidth
-      const h = Math.max(180, Math.floor((w * 9) / 16))
+      const h = Math.max(200, Math.floor((w * 9) / 16))
       renderer.setSize(w, h)
       camera.aspect = w / h
       camera.updateProjectionMatrix()
@@ -145,5 +171,5 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
     }
   }, [playKey, ethanolFraction, reducedMotion])
 
-  return <div ref={mountRef} style={{ width: '100%', maxWidth: 360, height: 220, margin: '8px auto 0' }} />
+  return <div ref={mountRef} style={{ width: '100%', maxWidth: 360, height: 240, margin: '8px auto 0' }} />
 }
