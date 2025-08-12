@@ -84,13 +84,24 @@ export default function App() {
 
   const unitLabel = unit === 'gal' ? 'gal' : 'L'
   const ethanolWidth = `${round(ratioEthanol * 100, 1)}%`
-  const pretty = (v) => (v === Infinity ? '∞' : round(v, unit === 'gal' ? 2 : 2))
+  const pretty = (v) => (v === Infinity ? '∞' : round(v, unit === 'gal' ? 1 : 1))
+
+  function handleCalc() { setHasCalculated(true) }
+  function handleReset() { window.location.reload() }
 
   return (
     <div className="rp-app">
       <div className="rp-topbar" role="banner">
         <div />
-        <div className="rp-title">Calculadora de mistura</div>
+        <div className="rp-header-stack">
+          <div className="rp-title">Calculadora de mistura</div>
+          <div className="rp-subtitle">
+            Race Performance
+            <a className="rp-ig-icon" href="https://www.instagram.com/raceperformance_/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm5 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" stroke="currentColor" strokeWidth="1"/></svg>
+            </a>
+          </div>
+        </div>
         <div />
       </div>
 
@@ -101,10 +112,9 @@ export default function App() {
               <div className="rp-group-title">Tanque</div>
               <div className="rp-row">
                 <div className="rp-label">Volume final desejado ({unitLabel === 'gal' ? 'gal' : 'L'})</div>
-                <div className="input-wrap">
-                  <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String(Math.max(0, (Number(v)||0) - (unit==='gal'?0.5:1))))}>−</button>
+                <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
                   <input className="rp-input" type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
-                  <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String((Number(v)||0) + (unit==='gal'?0.5:1)))}>+</button>
+                  <input className="rp-slider" type="range" min="0" max="200" step="0.1" value={Number(unit === 'gal' ? totalVolumeInput : totalVolumeInput)} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
                 </div>
               </div>
               <div className="rp-row">
@@ -120,10 +130,9 @@ export default function App() {
               <div className="rp-group-title">Alvo</div>
               <div className="rp-row">
                 <div className="rp-label">% de etanol desejada</div>
-                <div className="input-wrap">
-                  <button className="rp-step" onClick={()=> setTargetE(v => String(Math.max(0, (Number(v)||0) - 1)))}>−</button>
-                  <input className="rp-input" type="number" min="0" max="100" step="1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
-                  <button className="rp-step" onClick={()=> setTargetE(v => String(Math.min(100, (Number(v)||0) + 1)))}>+</button>
+                <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
+                  <input className="rp-input" type="number" min="0" max="100" step="0.1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
+                  <input className="rp-slider" type="range" min="0" max="100" step="0.1" value={Number(targetE)} onChange={(e)=> setTargetE(e.target.value)} />
                 </div>
               </div>
               <div className="rp-tank" title={`Etanol ${ethanolWidth}`}>
@@ -140,20 +149,41 @@ export default function App() {
               </div>
 
               <div className="cta-row">
-                {!hasCalculated && (
-                  <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
-                )}
-                {hasCalculated && (
-                  <>
-                    <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
-                    <a className="rp-cta-ig"
-                      href="https://www.instagram.com/raceperformance_?igsh=MWY1N25vZ3hmMTdsZA=="
-                      target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                      @raceperformance_
-                    </a>
-                  </>
+                {!hasCalculated ? (
+                  <button className="rp-cta" onClick={handleCalc}>CALCULAR</button>
+                ) : (
+                  <button className="rp-cta" onClick={handleReset}>RECOMEÇAR</button>
                 )}
               </div>
+
+              {hasCalculated && (
+                <div className="results-block">
+                  <div className="results-kpis">
+                    <div className="item">
+                      <div className="label">Etanol (E100)</div>
+                      <div className="value">{pretty(ethanolInUnit)} {unitLabel}</div>
+                    </div>
+                    <div className="item">
+                      <div className="label">Gasolina</div>
+                      <div className="value">{pretty(gasolineInUnit)} {unitLabel}</div>
+                    </div>
+                    <div className="item">
+                      <div className="label">E% final</div>
+                      <div className="value">{round(result.finalEPercent, 1)}%</div>
+                    </div>
+                  </div>
+
+                  <div className="fuel-anim" data-play={hasCalculated} style={{ ['--gas']: `${Math.max(0, Math.min(100, 100 - Number(targetE)))}%`, ['--eth']: `${Math.max(0, Math.min(100, Number(targetE)))}%` }}>
+                    <div className="can" />
+                    <div className="fluid">
+                      <div className="gas" style={{ height: `calc((100%)*${Math.max(0, Math.min(100, 100 - Number(targetE)))} / 100)` }} />
+                      <div className="eth" style={{ height: `calc((100%)*${Math.max(0, Math.min(100, Number(targetE)))} / 100)` }} />
+                    </div>
+                    <div className="nozzle" />
+                    <div className="stream" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
