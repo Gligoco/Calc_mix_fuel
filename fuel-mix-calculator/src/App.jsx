@@ -42,7 +42,8 @@ export default function App() {
   const [Vtotal, setVtotal] = useLocalStorage('Vtotal', 40)
   const [Etarget, setEtarget] = useLocalStorage('Etarget', 60)
 
-  const [hasCalculated, setHasCalculated] = useLocalStorage('hasCalculated', false)
+  const [hasCalculated, setHasCalculated] = useLocalStorage('hasCalculated', true)
+  useEffect(() => { setHasCalculated(true) }, [])
   function handleCalc() { setHasCalculated(true) }
   function handleReset() { window.location.reload() }
 
@@ -96,14 +97,6 @@ export default function App() {
               <div className="rp-tank" title={`Etanol ${barWidth}`}>
                 <div className="eth" style={{ width: barWidth }} />
                 <div className="label">E{round(Number(Etarget)||0,0)}</div>
-              </div>
-
-              <div className="cta-row">
-                {!hasCalculated ? (
-                  <button className="rp-cta" onClick={handleCalc}>CALCULAR</button>
-                ) : (
-                  <button className="rp-cta" onClick={handleReset}>RECOMEÇAR</button>
-                )}
               </div>
 
               {hasCalculated && (
