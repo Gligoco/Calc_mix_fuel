@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import rpLogo from '/assets/IMG_6442.jpeg'
 
 const LITERS_PER_GALLON = 3.78541
 
@@ -92,7 +93,7 @@ export default function App() {
   return (
     <div className="rp-app">
       <div className="rp-topbar" role="banner">
-        <img className="rp-logo-img" src="/assets/IMG_6442.jpeg" alt="Race Performance" />
+        <img className="rp-logo-img" src={rpLogo} alt="Race Performance" />
         <div className="rp-header-stack">
           <div className="rp-title">Calculadora de mistura</div>
           <div className="rp-subtitle">
