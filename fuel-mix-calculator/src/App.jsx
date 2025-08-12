@@ -89,7 +89,7 @@ export default function App() {
   return (
     <div className="rp-app">
       <div className="rp-topbar" role="banner">
-        <img className="rp-logo-img" src="/logo.svg" alt="Race Performance logo" />
+        <img className="rp-logo-img" src="/assets/logo-race.svg?v=1" alt="Race Performance logo" />
         <div className="rp-title">Calculadora de mistura</div>
         <div />
       </div>
@@ -98,9 +98,9 @@ export default function App() {
         <div className="rp-inputs-wrapper">
           <div className="rp-inputs">
             <div className="rp-group">
-              <div className="rp-group-title">Tank Info</div>
+              <div className="rp-group-title">Tanque</div>
               <div className="rp-row">
-                <div className="rp-label">Final desired volume ({unitLabel})</div>
+                <div className="rp-label">Volume final desejado ({unitLabel === 'gal' ? 'gal' : 'L'})</div>
                 <div className="input-wrap">
                   <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String(Math.max(0, (Number(v)||0) - (unit==='gal'?0.5:1))))}>−</button>
                   <input className="rp-input" type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
@@ -110,16 +110,16 @@ export default function App() {
               <div className="rp-row">
                 <div className="rp-label">Unidades</div>
                 <div className="input-wrap" style={{ gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <button className="rp-chip" aria-pressed={unit==='L'} onClick={()=> setUnit('L')}>L</button>
-                  <button className="rp-chip" aria-pressed={unit==='gal'} onClick={()=> setUnit('gal')}>gal</button>
+                  <button className="rp-chip" aria-pressed={unit==='L'} onClick={()=> setUnit('L')}>Litros</button>
+                  <button className="rp-chip" aria-pressed={unit==='gal'} onClick={()=> setUnit('gal')}>Galões</button>
                 </div>
               </div>
             </div>
 
             <div className="rp-group">
-              <div className="rp-group-title">Target Info</div>
+              <div className="rp-group-title">Alvo</div>
               <div className="rp-row">
-                <div className="rp-label">E% desejado</div>
+                <div className="rp-label">% de etanol desejada</div>
                 <div className="input-wrap">
                   <button className="rp-step" onClick={()=> setTargetE(v => String(Math.max(0, (Number(v)||0) - 1)))}>−</button>
                   <input className="rp-input" type="number" min="0" max="100" step="1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
@@ -127,7 +127,7 @@ export default function App() {
                 </div>
               </div>
               <div className="rp-row">
-                <div className="rp-label">Gasolina (BR)</div>
+                <div className="rp-label">Tipo de gasolina (BR)</div>
                 <select className="rp-select" value={brGasTypeId} onChange={(e)=> setBrGasTypeId(e.target.value)}>
                   {BR_GAS_TYPES.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
                 </select>
@@ -163,16 +163,16 @@ export default function App() {
           )}
         </div>
         {hasCalculated && (
-          <a className="rp-instagram" href="https://www.instagram.com/raceperformance_?igsh=MWY1N25vZ3hmMTdsZA==" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm5 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" stroke="currentColor" strokeWidth="1" fill="none"/>
-            </svg>
+          <a className="rp-cta" style={{ display: 'inline-grid', placeItems: 'center', padding: '0 14px' }}
+             href="https://www.instagram.com/raceperformance_?igsh=MWY1N25vZ3hmMTdsZA=="
+             target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            @raceperformance_
           </a>
         )}
         <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
       </div>
 
-      <div className="rp-footer-note">Propriedade intelectual de Gabriel Cappello Machado.</div>
+      <div className="rp-footer-note">Desenvolvido por Gabriel Cappello Machado.</div>
     </div>
   )
 }
