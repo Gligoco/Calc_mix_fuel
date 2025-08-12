@@ -162,14 +162,14 @@ export default function App() {
             </>
           )}
         </div>
+        <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
         {hasCalculated && (
-          <a className="rp-cta" style={{ display: 'inline-grid', placeItems: 'center', padding: '0 14px' }}
+          <a className="rp-cta-ig"
              href="https://www.instagram.com/raceperformance_?igsh=MWY1N25vZ3hmMTdsZA=="
              target="_blank" rel="noopener noreferrer" aria-label="Instagram">
             @raceperformance_
           </a>
         )}
-        <button className="rp-cta" onClick={()=> setHasCalculated(true)}>CALCULAR</button>
       </div>
 
       <div className="rp-footer-note">Desenvolvido por Gabriel Cappello Machado.</div>

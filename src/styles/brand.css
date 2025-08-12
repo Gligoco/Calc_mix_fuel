@@ -73,15 +73,23 @@ body {
 .rp-tank .label { position: relative; z-index: 1; font-weight: 700; letter-spacing: .06em; font-size: 12px; }
 
 /* Sticky results bar */
-.rp-results { position: sticky; bottom: 0; z-index: 10; background: var(--rp-surface); border-top: 1px solid var(--rp-border); display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 10px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); box-shadow: 0 -8px 22px rgba(0,0,0,0.35); }
+.rp-results {
+  position: sticky; bottom: 0; z-index: 10;
+  background: var(--rp-surface);
+  border-top: 1px solid var(--rp-border);
+  display: grid; grid-template-columns: 1fr auto 1fr; /* left results | centered CTA | right IG */
+  gap: 8px; align-items: center;
+  padding: 10px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 22px rgba(0,0,0,0.35);
+}
 .rp-results-left { display: flex; gap: 12px; align-items: center; min-width: 0; }
 .rp-kpi .k-label { font-size: clamp(11px, 2.6vw, 13px); color: var(--rp-muted); text-transform: uppercase; letter-spacing: .08em; }
 .rp-kpi .k-value { font-size: clamp(18px, 4.8vw, 26px); font-weight: 800; white-space: nowrap; }
 .results-value { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rp-cta { min-width: 112px; height: 44px; padding: 0 18px; border-radius: 999px; background: var(--rp-red); border: 0; color: #fff; font-weight: 800; letter-spacing: .06em; }
+.rp-cta { min-width: 112px; height: 44px; padding: 0 18px; border-radius: 999px; background: var(--rp-red); border: 0; color: #fff; font-weight: 800; letter-spacing: .06em; justify-self: center; }
 .rp-cta:active { transform: scale(0.98); }
-.rp-instagram { width: 44px; height: 44px; border-radius: 50%; background: var(--rp-surface-2); border: 1px solid var(--rp-border); display: grid; place-items: center; color: var(--rp-text); }
-.rp-instagram:active { transform: scale(0.98); }
+.rp-cta-ig { height: 44px; padding: 0 14px; border-radius: 999px; background: var(--rp-red); border: 0; color: #fff; font-weight: 800; letter-spacing: .02em; display: inline-grid; place-items: center; justify-self: end; }
+.rp-cta-ig:active { transform: scale(0.98); }
 
 /* Watermark inside results */
 .rp-results::before { content: ""; position: absolute; inset: 0; background: url('/logo.svg') right 12px bottom 8px/80px no-repeat; opacity: 0.04; pointer-events: none; }
