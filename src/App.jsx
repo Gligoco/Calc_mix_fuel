@@ -71,6 +71,7 @@ export default function App() {
     { id: 'E50', name: 'E50', targetE: 50 },
     { id: 'E85', name: 'E85', targetE: 85 },
   ])
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const selectedGas = BR_GAS_TYPES.find(g => g.id === brGasTypeId) || BR_GAS_TYPES[0]
 
@@ -95,18 +96,18 @@ export default function App() {
   const unitLabel = unit === 'gal' ? 'gal' : 'L'
   const ethanolWidth = `${round(ratioEthanol * 100, 1)}%`
   const pretty = (v) => (v === Infinity ? '∞' : round(v, unit === 'gal' ? 2 : 2))
-
-  const segIndex = 1 // placeholder for 3 modes; UI only. Not altering logic.
+  const segIndex = 1
 
   return (
     <div className="rp-app">
       <div className="rp-topbar">
-        <div className="rp-logo" />
-        <div className="rp-title">Race Performance</div>
+        <div className="rp-top-left">
+          <div className="rp-logo" />
+          <div className="rp-title">Race Performance</div>
+        </div>
       </div>
 
       <div className="rp-shell">
-        {/* Segmented control (UI only) */}
         <div className="rp-seg" style={{ ['--seg-index']: segIndex }}>
           <div className="highlight" />
           <button className="item" aria-selected={false}>Tanque vazio</button>
@@ -114,69 +115,73 @@ export default function App() {
           <button className="item" aria-selected={false}>Avançado</button>
         </div>
 
-        {/* Preset chips */}
         <div className="rp-chips">
           {presets.slice(0,3).map(p => (
             <button key={p.id} className="rp-chip" aria-pressed={Number(targetE) === p.targetE} onClick={()=> setTargetE(p.targetE)}>{p.name}</button>
           ))}
         </div>
 
-        {/* Inputs: scroll only this group when keyboard opens */}
         <div className="rp-inputs-wrapper">
           <div className="rp-inputs">
-            <div className="rp-row">
-              <div className="rp-label">Volume final ({unitLabel})</div>
-              <div className="rp-field">
-                <input type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
-                <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String(Math.max(0, (Number(v)||0) - (unit==='gal'?0.5:1))))}>-</button>
-                <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String((Number(v)||0) + (unit==='gal'?0.5:1)))}>+</button>
+            <div className="rp-group">
+              <div className="rp-group-title">Tank Info</div>
+              <div className="rp-row">
+                <div className="rp-label">Volume final ({unitLabel})</div>
+                <div className="rp-field">
+                  <input type="number" min="0" step="0.1" value={totalVolumeInput} onChange={(e)=> setTotalVolumeInput(e.target.value)} />
+                  <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String(Math.max(0, (Number(v)||0) - (unit==='gal'?0.5:1))))}>-</button>
+                  <button className="rp-step" onClick={()=> setTotalVolumeInput(v => String((Number(v)||0) + (unit==='gal'?0.5:1)))}>+</button>
+                </div>
+              </div>
+              <div className="rp-row">
+                <div className="rp-label">Unidades</div>
+                <div className="rp-field" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                  <button className="rp-chip" aria-pressed={unit==='L'} onClick={()=> setUnit('L')}>L</button>
+                  <button className="rp-chip" aria-pressed={unit==='gal'} onClick={()=> setUnit('gal')}>gal</button>
+                </div>
               </div>
             </div>
 
-            <div className="rp-row">
-              <div className="rp-label">E% desejado</div>
-              <div className="rp-field">
-                <input type="number" min="0" max="100" step="1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
-                <button className="rp-step" onClick={()=> setTargetE(v => String(Math.max(0, (Number(v)||0) - 1)))}>-</button>
-                <button className="rp-step" onClick={()=> setTargetE(v => String(Math.min(100, (Number(v)||0) + 1)))}>+</button>
+            <div className="rp-group">
+              <div className="rp-group-title">Target Info</div>
+              <div className="rp-row">
+                <div className="rp-label">E% desejado</div>
+                <div className="rp-field">
+                  <input type="number" min="0" max="100" step="1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
+                  <button className="rp-step" onClick={()=> setTargetE(v => String(Math.max(0, (Number(v)||0) - 1)))}>-</button>
+                  <button className="rp-step" onClick={()=> setTargetE(v => String(Math.min(100, (Number(v)||0) + 1)))}>+</button>
+                </div>
+              </div>
+              <div className="rp-row">
+                <div className="rp-label">Gasolina (BR)</div>
+                <div className="rp-field" style={{ gridTemplateColumns: '1fr' }}>
+                  <select value={brGasTypeId} onChange={(e)=> setBrGasTypeId(e.target.value)}>
+                    {BR_GAS_TYPES.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
+                  </select>
+                </div>
+                <div className="rp-label" style={{ fontSize: 11 }}>Comum/Aditivada ≈ 27% • Premium/Podium ≈ 25%</div>
               </div>
             </div>
 
-            <div className="rp-row">
-              <div className="rp-label">Gasolina (BR)</div>
-              <div className="rp-field" style={{ gridTemplateColumns: '1fr' }}>
-                <select value={brGasTypeId} onChange={(e)=> setBrGasTypeId(e.target.value)}>
-                  {BR_GAS_TYPES.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
-                </select>
-              </div>
-              <div className="rp-label" style={{ fontSize: 11 }}>Comum/Aditivada ≈ 27% • Premium/Podium ≈ 25%</div>
-            </div>
-
-            <div className="rp-row">
-              <div className="rp-label">Unidades</div>
-              <div className="rp-field" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                <button className="rp-chip" aria-pressed={unit==='L'} onClick={()=> setUnit('L')}>L</button>
-                <button className="rp-chip" aria-pressed={unit==='gal'} onClick={()=> setUnit('gal')}>gal</button>
-              </div>
-            </div>
-
-            <div className="rp-row">
-              <button className="rp-chip" aria-pressed={false} onClick={handleSavePreset}>Salvar preset E{targetE}</button>
+            <div className="rp-group">
+              <button className="rp-chip" aria-pressed={false} onClick={()=> setShowAdvanced(v=>!v)}>{showAdvanced ? 'Advanced ▾' : 'Advanced ▸'}</button>
+              {showAdvanced && (
+                <div className="rp-row" style={{ marginTop: 8 }}>
+                  <button className="rp-chip" aria-pressed={false} onClick={handleSavePreset}>Salvar preset E{targetE}</button>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Tank bar */}
         <div className="rp-tank" title={`Etanol ${ethanolWidth}`}>
           <div className="eth" style={{ width: ethanolWidth }} />
           <div className="label">E{round(Number(targetE)||0,0)}</div>
         </div>
 
-        {/* Spacer to ensure results not overlapped */}
         <div style={{ height: 4 }} />
       </div>
 
-      {/* Sticky results */}
       <div className="rp-results">
         <div className="rp-kpis">
           <div className="rp-kpi">
