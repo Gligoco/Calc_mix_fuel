@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import FuelPBR from './components/FuelPBR'
 
 const LITERS_PER_GALLON = 3.78541
 
@@ -68,7 +67,6 @@ export default function App() {
   const [totalVolumeInput, setTotalVolumeInput] = useLocalStorage('totalVolume', 40)
   const [brGasTypeId, setBrGasTypeId] = useLocalStorage('br_gas_type', 'E27')
   const [hasCalculated, setHasCalculated] = useState(false)
-  const [playKey, setPlayKey] = useState(0)
 
   const selectedGas = BR_GAS_TYPES.find(g => g.id === brGasTypeId) || BR_GAS_TYPES[0]
 
@@ -88,11 +86,8 @@ export default function App() {
   const ethanolWidth = `${round(ratioEthanol * 100, 1)}%`
   const pretty = (v) => (v === Infinity ? '∞' : round(v, unit === 'gal' ? 1 : 1))
 
-  function handleCalc() { setHasCalculated(true); setPlayKey(k => k + 1) }
+  function handleCalc() { setHasCalculated(true) }
   function handleReset() { window.location.reload() }
-
-  // Proportions for animation
-  const ethanolPct = Math.max(0, Math.min(1, Number(targetE) / 100))
 
   return (
     <div className="rp-app">
@@ -177,9 +172,6 @@ export default function App() {
                       <div className="value">{round(result.finalEPercent, 1)}%</div>
                     </div>
                   </div>
-
-                  {/* Three.js PBR-based animation */}
-                  <FuelPBR ethanolFraction={ethanolPct} playKey={playKey} reducedMotion={window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches} />
                 </div>
               )}
             </div>
