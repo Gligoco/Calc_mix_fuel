@@ -39,14 +39,18 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
     key.position.set(3, 5, 4)
     scene.add(key)
 
-    // Environment (HDR) optional
+    // Environment (HDR) CC0 from Poly Haven, with local fallback
     const pmrem = new THREE.PMREMGenerator(renderer)
-    new RGBELoader().setPath('/assets/hdr/').load('studio_2k.hdr', (hdr) => {
+    const rgbe = new RGBELoader()
+    const applyHDR = (hdr) => {
       const env = pmrem.fromEquirectangular(hdr).texture
       scene.environment = env
       hdr.dispose?.()
       pmrem.dispose()
-    }, undefined, () => {/* silently ignore if missing */})
+    }
+    rgbe.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/studio_small_08_2k.hdr', applyHDR, undefined, () => {
+      new RGBELoader().setPath('/assets/hdr/').load('studio_2k.hdr', applyHDR, undefined, () => {/* ignore if missing */})
+    })
 
     // Materials
     const canMat = new THREE.MeshStandardMaterial({ color: 0x262a2f, metalness: 0.6, roughness: 0.35 })
@@ -76,7 +80,6 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
       model.position.y = 0
       canGroup.add(model)
 
-      // Compute inner bounds heuristically from model bbox
       const bbox = new THREE.Box3().setFromObject(model)
       const size = new THREE.Vector3(); bbox.getSize(size)
       innerWidth = Math.max(0.6, size.x * 0.7)
@@ -84,7 +87,6 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
       innerDepth = Math.max(0.25, size.z * 0.7)
       innerY = bbox.min.y + (size.y * 0.2) + innerHeight / 2
     }, undefined, () => {
-      // Fallback proxy can geometry
       const canGeo = new THREE.BoxGeometry(1.2, 1.6, 0.5)
       const canMesh = new THREE.Mesh(canGeo, canMat)
       canMesh.position.y = 0.8
@@ -109,7 +111,7 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
       root.add(barrel)
     })
 
-    // Fluid layers (created after a brief tick to let potential model load adjust bounds)
+    // Fluids
     const gasGeo = new THREE.BoxGeometry(innerWidth, innerHeight, innerDepth)
     const ethGeo = new THREE.BoxGeometry(innerWidth, innerHeight, innerDepth)
     const gasMesh = new THREE.Mesh(gasGeo, gasMat)
@@ -121,7 +123,7 @@ export default function FuelPBR({ ethanolFraction = 0.5, playKey = 0, reducedMot
     root.add(gasMesh)
     root.add(ethMesh)
 
-    // Stream (simple)
+    // Stream
     const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.001, 12), new THREE.MeshStandardMaterial({ color: 0xE10600, emissive: 0x180000 }))
     stream.position.set(0.37, 1.52, 0)
     stream.rotation.z = Math.PI / 2
