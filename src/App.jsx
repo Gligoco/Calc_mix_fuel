@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import rpLogo from '/assets/IMG_6442.jpeg'
 
-const BR_GAS_TYPES = [
-  { id: 'E27', name: 'Gasolina Comum/Aditivada (≈E27)', Eg: 0.27 },
-  { id: 'E25', name: 'Gasolina Premium/Podium (≈E25)', Eg: 0.25 },
+const GAS_OPTIONS = [
+  { id: 'E27', name: 'Gasolina C — E27 (27%)', Eg: 0.27 },
+  { id: 'E30', name: 'Gasolina C — E30 (30%)', Eg: 0.30 },
+]
+
+const ETH_OPTIONS = [
+  { id: 'hidratado', name: 'Etanol hidratado (≈95,5%)', Eeth: 0.955 },
+  { id: 'anidro', name: 'Etanol anidro (≈99,6%)', Eeth: 0.996 },
 ]
 
 function round(value, decimals = 2) {
@@ -25,36 +30,68 @@ function useLocalStorage(key, initialValue) {
   return [state, setState]
 }
 
-// From empty mixing with Gasoline C (Eg) and Ethanol E100 (Eeth = 1)
-// x = T*(Et - Eg)/(1 - Et), y = T - x
-function computeFromEmpty(T_liters, Etarget_percent, Eg) {
-  const T = Math.max(0, Number(T_liters) || 0)
-  const Et = Math.max(0, Math.min(1, (Number(Etarget_percent) || 0) / 100))
-  if (T <= 0) return { ok: false, message: 'Informe o volume final.', x: 0, y: 0, Et }
-  if (Et <= Eg) return { ok: false, message: 'E% alvo deve ser maior que o E% da Gasolina C.', x: 0, y: T, Et }
-  if (Et >= 1) return { ok: false, message: 'E% alvo deve ser menor que 100%.', x: 0, y: T, Et }
-  const denom = 1 - Et
-  if (Math.abs(denom) < 1e-9) return { ok: false, message: 'Parâmetros inválidos.', x: 0, y: T, Et }
-  const x = T * (Et - Eg) / denom
-  const y = T - x
-  if (x < 0 || y < 0) return { ok: false, message: 'Mistura inválida com os valores atuais.', x: 0, y: 0, Et }
-  return { ok: true, message: '', x, y, Et }
+// X = Y*(Etarget - Eg)/(Eethanol - Etarget)
+function computeAddEthanol(Y_liters, Etarget_pct, Eg, Eeth) {
+  const Y = Number(Y_liters) || 0
+  const Etarget = Math.max(0, Math.min(1, (Number(Etarget_pct) || 0) / 100))
+  if (Y <= 0) return { ok: false, msg: 'Informe Y > 0 (Gasolina C em litros).', X: 0 }
+  if (Etarget < Math.min(Eg, Eeth) || Etarget > Math.max(Eg, Eeth)) return { ok: false, msg: 'E% alvo fora do intervalo entre Eg e Eetanol.', X: 0 }
+  const denom = (Eeth - Etarget)
+  if (Math.abs(denom) < 1e-9) return { ok: false, msg: 'Divisão por zero. Ajuste E_alvo.', X: 0 }
+  const X = Y * (Etarget - Eg) / denom
+  if (X < 0) return { ok: false, msg: 'Resultado negativo. Verifique os valores.', X: 0 }
+  return { ok: true, msg: '', X }
+}
+
+// X = A*(Ec - Etarget)/(Etarget - Eg)
+function computeAddGasoline(A_liters, Ec_pct, Etarget_pct, Eg) {
+  const A = Number(A_liters) || 0
+  const Ec = Math.max(0, Math.min(1, (Number(Ec_pct) || 0) / 100))
+  const Etarget = Math.max(0, Math.min(1, (Number(Etarget_pct) || 0) / 100))
+  if (A <= 0) return { ok: false, msg: 'Informe A > 0 (volume atual em litros).', X: 0 }
+  if (Etarget < Math.min(Eg, Ec) || Etarget > Math.max(Eg, Ec)) return { ok: false, msg: 'E% alvo fora do intervalo entre Eg e Ec.', X: 0 }
+  const denom = (Etarget - Eg)
+  if (Math.abs(denom) < 1e-9) return { ok: false, msg: 'Divisão por zero. Ajuste E_alvo.', X: 0 }
+  const X = A * (Ec - Etarget) / denom
+  if (X < 0) return { ok: false, msg: 'Resultado negativo. Verifique os valores.', X: 0 }
+  return { ok: true, msg: '', X }
 }
 
 export default function App() {
-  const [totalVolume, setTotalVolume] = useLocalStorage('totalVolume', 40)
-  const [targetE, setTargetE] = useLocalStorage('targetE', 40)
-  const [gasTypeId, setGasTypeId] = useLocalStorage('gasType', 'E27')
+  // Mode selection
+  const [mode, setMode] = useLocalStorage('mode', 'add_ethanol') // 'add_ethanol' | 'add_gasoline'
+
+  // Common selectors
+  const [gasId, setGasId] = useLocalStorage('gasId', 'E27')
+  const gas = GAS_OPTIONS.find(g => g.id === gasId) || GAS_OPTIONS[0]
+  const [ethId, setEthId] = useLocalStorage('ethId', 'hidratado')
+  const eth = ETH_OPTIONS.find(e => e.id === ethId) || ETH_OPTIONS[0]
+
+  // Inputs for adding ethanol
+  const [Y, setY] = useLocalStorage('Y', 30) // liters of Gasoline C
+  const [Etarget1, setEtarget1] = useLocalStorage('Etarget1', 40)
+
+  // Inputs for adding gasoline
+  const [A, setA] = useLocalStorage('A', 20) // liters currently in tank
+  const [Ec, setEc] = useLocalStorage('Ec', 60) // current ethanol % in tank
+  const [Etarget2, setEtarget2] = useLocalStorage('Etarget2', 40)
+
   const [hasCalculated, setHasCalculated] = useState(false)
-
-  const gas = BR_GAS_TYPES.find(g => g.id === gasTypeId) || BR_GAS_TYPES[0]
-
-  const result = useMemo(() => computeFromEmpty(totalVolume, targetE, gas.Eg), [totalVolume, targetE, gas.Eg])
-
-  const barWidth = `${round(Math.max(0, Math.min(100, Number(targetE) || 0)), 1)}%`
-
   function handleCalc() { setHasCalculated(true) }
   function handleReset() { window.location.reload() }
+
+  const addEthRes = useMemo(() => {
+    if (mode !== 'add_ethanol') return { ok: false, X: 0, msg: '' }
+    return computeAddEthanol(Y, Etarget1, gas.Eg, eth.Eeth)
+  }, [mode, Y, Etarget1, gas.Eg, eth.Eeth])
+
+  const addGasRes = useMemo(() => {
+    if (mode !== 'add_gasoline') return { ok: false, X: 0, msg: '' }
+    return computeAddGasoline(A, Ec, Etarget2, gas.Eg)
+  }, [mode, A, Ec, Etarget2, gas.Eg])
+
+  const barPercent = mode === 'add_ethanol' ? Number(Etarget1) : Number(Etarget2)
+  const barWidth = `${round(Math.max(0, Math.min(100, barPercent || 0)), 1)}%`
 
   return (
     <div className="rp-app">
@@ -76,59 +113,127 @@ export default function App() {
         <div className="rp-inputs-wrapper">
           <div className="rp-inputs">
             <div className="rp-group">
-              <div className="rp-group-title">Tanque</div>
-              <div className="rp-row">
-                <div className="rp-label">Volume final desejado (L)</div>
-                <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
-                  <input className="rp-input" type="number" min="0" step="0.1" value={totalVolume} onChange={(e)=> setTotalVolume(e.target.value)} />
-                  <input className="rp-slider" type="range" min="0" max="200" step="0.1" value={Number(totalVolume)} onChange={(e)=> setTotalVolume(e.target.value)} />
-                </div>
+              <div className="rp-group-title">Modo</div>
+              <div className="rp-chips">
+                <button className="rp-chip" aria-pressed={mode==='add_ethanol'} onClick={()=> setMode('add_ethanol')}>Adicionar etanol</button>
+                <button className="rp-chip" aria-pressed={mode==='add_gasoline'} onClick={()=> setMode('add_gasoline')}>Adicionar gasolina</button>
               </div>
             </div>
 
             <div className="rp-group">
-              <div className="rp-group-title">Alvo</div>
+              <div className="rp-group-title">Parâmetros do combustível</div>
               <div className="rp-row">
-                <div className="rp-label">% de etanol desejada</div>
-                <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
-                  <input className="rp-input" type="number" min="0" max="100" step="0.1" value={targetE} onChange={(e)=> setTargetE(e.target.value)} />
-                  <input className="rp-slider" type="range" min="0" max="100" step="0.1" value={Number(targetE)} onChange={(e)=> setTargetE(e.target.value)} />
-                </div>
-              </div>
-              <div className="rp-tank" title={`Etanol ${barWidth}`}>
-                <div className="eth" style={{ width: barWidth }} />
-                <div className="label">E{round(Number(targetE)||0,0)}</div>
-              </div>
-
-              <div className="rp-row">
-                <div className="rp-label">Tipo de gasolina (BR)</div>
-                <select className="rp-select" value={gasTypeId} onChange={(e)=> setGasTypeId(e.target.value)}>
-                  {BR_GAS_TYPES.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
+                <div className="rp-label">Gasolina C (E_g)</div>
+                <select className="rp-select" value={gasId} onChange={(e)=> setGasId(e.target.value)}>
+                  {GAS_OPTIONS.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
                 </select>
               </div>
-
-              <div className="cta-row">
-                {!hasCalculated ? (
-                  <button className="rp-cta" onClick={handleCalc}>CALCULAR</button>
-                ) : (
-                  <button className="rp-cta" onClick={handleReset}>RECOMEÇAR</button>
-                )}
+              <div className="rp-row">
+                <div className="rp-label">Etanol adicionado (E_etanol)</div>
+                <select className="rp-select" value={ethId} onChange={(e)=> setEthId(e.target.value)}>
+                  {ETH_OPTIONS.map(o => (<option key={o.id} value={o.id}>{o.name}</option>))}
+                </select>
               </div>
+            </div>
 
-              {hasCalculated && (
-                <div className="results-block">
-                  {result.ok ? (
-                    <div className="results-kpis">
-                      <div className="item"><div className="label">Etanol</div><div className="value">{round(result.x, 2)} L</div></div>
-                      <div className="item"><div className="label">Gasolina</div><div className="value">{round(result.y, 2)} L</div></div>
-                      <div className="item"><div className="label">E% alvo</div><div className="value">{round(Number(targetE)||0, 2)}%</div></div>
-                    </div>
+            {mode === 'add_ethanol' ? (
+              <div className="rp-group">
+                <div className="rp-group-title">Adicionar etanol</div>
+                <div className="rp-row">
+                  <div className="rp-label">Y — Gasolina C (L)</div>
+                  <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
+                    <input className="rp-input" type="number" min="0" step="0.1" value={Y} onChange={(e)=> setY(e.target.value)} />
+                    <input className="rp-slider" type="range" min="0" max="200" step="0.1" value={Number(Y)} onChange={(e)=> setY(e.target.value)} />
+                  </div>
+                </div>
+                <div className="rp-row">
+                  <div className="rp-label">E% alvo</div>
+                  <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
+                    <input className="rp-input" type="number" min="0" max="100" step="0.1" value={Etarget1} onChange={(e)=> setEtarget1(e.target.value)} />
+                    <input className="rp-slider" type="range" min="0" max="100" step="0.1" value={Number(Etarget1)} onChange={(e)=> setEtarget1(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="rp-tank" title={`Etanol ${barWidth}`}>
+                  <div className="eth" style={{ width: barWidth }} />
+                  <div className="label">E{round(Number(Etarget1)||0,0)}</div>
+                </div>
+
+                <div className="cta-row">
+                  {!hasCalculated ? (
+                    <button className="rp-cta" onClick={handleCalc}>CALCULAR</button>
                   ) : (
-                    <div className="rp-footer-note" style={{ color: '#ffb3b3' }}>{result.message}</div>
+                    <button className="rp-cta" onClick={handleReset}>RECOMEÇAR</button>
                   )}
                 </div>
-              )}
-            </div>
+
+                {hasCalculated && (
+                  <div className="results-block">
+                    {addEthRes.ok ? (
+                      <div className="results-kpis">
+                        <div className="item"><div className="label">Etanol a adicionar</div><div className="value">{round(addEthRes.X, 2)} L</div></div>
+                        <div className="item"><div className="label">Gasolina C (Y)</div><div className="value">{round(Number(Y)||0, 2)} L</div></div>
+                        <div className="item"><div className="label">E% alvo</div><div className="value">{round(Number(Etarget1)||0, 2)}%</div></div>
+                      </div>
+                    ) : (
+                      <div className="rp-footer-note" style={{ color: '#ffb3b3' }}>{addEthRes.msg}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rp-group">
+                <div className="rp-group-title">Adicionar gasolina</div>
+                <div className="rp-row">
+                  <div className="rp-label">A — Volume atual no tanque (L)</div>
+                  <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
+                    <input className="rp-input" type="number" min="0" step="0.1" value={A} onChange={(e)=> setA(e.target.value)} />
+                    <input className="rp-slider" type="range" min="0" max="200" step="0.1" value={Number(A)} onChange={(e)=> setA(e.target.value)} />
+                  </div>
+                </div>
+                <div className="rp-row">
+                  <div className="rp-label">E% atual no tanque (E_c)</div>
+                  <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
+                    <input className="rp-input" type="number" min="0" max="100" step="0.1" value={Ec} onChange={(e)=> setEc(e.target.value)} />
+                    <input className="rp-slider" type="range" min="0" max="100" step="0.1" value={Number(Ec)} onChange={(e)=> setEc(e.target.value)} />
+                  </div>
+                </div>
+                <div className="rp-row">
+                  <div className="rp-label">E% alvo</div>
+                  <div className="input-wrap" style={{ gridTemplateColumns: '1fr' }}>
+                    <input className="rp-input" type="number" min="0" max="100" step="0.1" value={Etarget2} onChange={(e)=> setEtarget2(e.target.value)} />
+                    <input className="rp-slider" type="range" min="0" max="100" step="0.1" value={Number(Etarget2)} onChange={(e)=> setEtarget2(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="rp-tank" title={`Etanol ${barWidth}`}>
+                  <div className="eth" style={{ width: barWidth }} />
+                  <div className="label">E{round(Number(Etarget2)||0,0)}</div>
+                </div>
+
+                <div className="cta-row">
+                  {!hasCalculated ? (
+                    <button className="rp-cta" onClick={handleCalc}>CALCULAR</button>
+                  ) : (
+                    <button className="rp-cta" onClick={handleReset}>RECOMEÇAR</button>
+                  )}
+                </div>
+
+                {hasCalculated && (
+                  <div className="results-block">
+                    {addGasRes.ok ? (
+                      <div className="results-kpis">
+                        <div className="item"><div className="label">Gasolina a adicionar</div><div className="value">{round(addGasRes.X, 2)} L</div></div>
+                        <div className="item"><div className="label">Volume no tanque (A)</div><div className="value">{round(Number(A)||0, 2)} L</div></div>
+                        <div className="item"><div className="label">E% atual</div><div className="value">{round(Number(Ec)||0, 2)}%</div></div>
+                      </div>
+                    ) : (
+                      <div className="rp-footer-note" style={{ color: '#ffb3b3' }}>{addGasRes.msg}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
