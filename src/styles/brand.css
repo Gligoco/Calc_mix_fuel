@@ -110,5 +110,8 @@ body {
 .rp-chip { height: 32px; padding: 0 12px; border-radius: 999px; background: transparent; border: 1px solid var(--rp-red); color: var(--rp-text); font-weight: 600; }
 .rp-chip[aria-pressed="true"] { background: var(--rp-red); border-color: var(--rp-red); color: #fff; }
 
+/* Footer container (two lines) */
+.rp-footer { padding: 8px 12px 10px; }
+
 /* Desktop */
 @media (min-width: 768px) { .rp-app { max-width: 480px; margin: 0 auto; border-left: 1px solid var(--rp-border); border-right: 1px solid var(--rp-border); } }
