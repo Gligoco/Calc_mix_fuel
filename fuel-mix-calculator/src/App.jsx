@@ -25,15 +25,15 @@ function useLocalStorage(key, initialValue) {
   return [state, setState]
 }
 
-// From empty tank mixing with Gasoline C (Eg) and Ethanol (Eeth ~ 0.955)
-// x = T*(Et - Eg)/(Eeth - Et), y = T - x
-function computeFromEmpty(T_liters, Etarget_percent, Eg, Eeth) {
+// From empty mixing with Gasoline C (Eg) and Ethanol E100 (Eeth = 1)
+// x = T*(Et - Eg)/(1 - Et), y = T - x
+function computeFromEmpty(T_liters, Etarget_percent, Eg) {
   const T = Math.max(0, Number(T_liters) || 0)
   const Et = Math.max(0, Math.min(1, (Number(Etarget_percent) || 0) / 100))
   if (T <= 0) return { ok: false, message: 'Informe o volume final.', x: 0, y: 0, Et }
   if (Et <= Eg) return { ok: false, message: 'E% alvo deve ser maior que o E% da Gasolina C.', x: 0, y: T, Et }
-  if (Et >= Eeth) return { ok: false, message: 'E% alvo deve ser menor que o E% do etanol.', x: 0, y: T, Et }
-  const denom = Eeth - Et
+  if (Et >= 1) return { ok: false, message: 'E% alvo deve ser menor que 100%.', x: 0, y: T, Et }
+  const denom = 1 - Et
   if (Math.abs(denom) < 1e-9) return { ok: false, message: 'Parâmetros inválidos.', x: 0, y: T, Et }
   const x = T * (Et - Eg) / denom
   const y = T - x
@@ -48,9 +48,8 @@ export default function App() {
   const [hasCalculated, setHasCalculated] = useState(false)
 
   const gas = BR_GAS_TYPES.find(g => g.id === gasTypeId) || BR_GAS_TYPES[0]
-  const Eeth = 0.955 // considerar água no etanol (hidratado) por padrão
 
-  const result = useMemo(() => computeFromEmpty(totalVolume, targetE, gas.Eg, Eeth), [totalVolume, targetE, gas.Eg])
+  const result = useMemo(() => computeFromEmpty(totalVolume, targetE, gas.Eg), [totalVolume, targetE, gas.Eg])
 
   const barWidth = `${round(Math.max(0, Math.min(100, Number(targetE) || 0)), 1)}%`
 
@@ -106,7 +105,6 @@ export default function App() {
                 <select className="rp-select" value={gasTypeId} onChange={(e)=> setGasTypeId(e.target.value)}>
                   {BR_GAS_TYPES.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
                 </select>
-                <div className="rp-label" style={{ fontSize: 11 }}>Considera etanol hidratado (≈95,5%).</div>
               </div>
 
               <div className="cta-row">
